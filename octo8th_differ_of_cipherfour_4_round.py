@@ -5,10 +5,15 @@ def s_change(int)->int:
   s_text = s_table[int]
   return s_text
 
-def p_change(int)->int:
-  p_table = [0,4,8,0xc,1,5,9,0xd,2,6,0xa,0xe,3,7,0xb,0xf]
-  p_text = p_table[int]
-  return p_text
+def p_change(mslist)->int:
+  p_r='0000000000000000'
+  for i in range(4):
+    ms = mslist[i]
+    p_r = p_r[0:4*0+i] + ms[0] + p_r[4*0+i+1:]
+    p_r = p_r[0:4*1+i] + ms[1] + p_r[4*1+i+1:]
+    p_r = p_r[0:4*2+i] + ms[2] + p_r[4*2+i+1:]
+    p_r = p_r[0:4*3+i] + ms[3] + p_r[4*3+i+1:]
+  return int(p_r,2)
 
 def s_differ(int1,int2)->int:
   s_res_1 = s_change(int1)
@@ -30,50 +35,55 @@ def cipherfour_round(m,k,round_index)->int:
   if round_index!=3:
     m_p_plain=int(m_s_string,2)
     mslist =[m_s_string[0:4], m_s_string[4:8], m_s_string[8:12], m_s_string[12:16]]
-    p_r=''
-    for i in range(4):
-      a = int(mslist[i],2)
-      b = getBinaryString(p_change(a),4)
-      p_r = p_r+b
-    return int(p_r,2)
+    p_r = p_change(mslist)
+    return p_r
   else:
     m_p_plain=int(m_s_string,2)
     m_p_plain = m_p_plain^k[round_index+1]
     return m_p_plain
 
 def cipherfour(m,k_list):
-  result=[0,0,0,0,0,0]
+  round_num = 4
+  result=[0,0,0,0,0,0] #4+2
   result[0]=m
-  for i in range(4):
+  for i in range(round_num):
     result[i+1]= cipherfour_round(result[i],k_list,i)
-  return result[4]
+  return result[round_num]
 
 import random
+
 def generate_keys():
-  key_list = [0,0,0,0,0]
+  key_list = [0,0,0,0,0] # 4+1
+  used_key = []
   for i in range(5):
     a = random.randint(0,pow(2,16)-1)
+    while(a in used_key):
+      a = random.randint(0,pow(2,16)-1)
     key_list[i]=a
+    used_key=[used_key,a]
   return key_list
     
-dif_tab = np.zeros((pow(2,16)),dtype=int)
 
 def main():
-  for i in range(20):
+  dif_tab = np.zeros((pow(2,16)),dtype=int)
+  key_set_nums = 30
+  for i in range(key_set_nums):
     key_list = generate_keys()
     for i in range(pow(2,16)-1):
       int1 = i
-      int2 = i^0x0020
+      int2 = i^0xf0
       res1 = cipherfour(int1,key_list)
       res2 = cipherfour(int2,key_list)
       dif = res1^res2
       dif_tab[dif]+=1
+  
   max = np.max(dif_tab)
-  index = np.where(dif_tab==max)[0]
+  index = np.where(dif_tab==max)[0][0]
   print("差分为",end='')
-  print(index)
+  print(hex(index))
   print("概率为",end='')
-  print(max/(20*pow(2,16)))
+  print(max/(key_set_nums*pow(2,16))*100,end='')
+  print("%")
 
 if __name__ == "__main__":
   main()
